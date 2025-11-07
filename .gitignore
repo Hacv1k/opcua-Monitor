@@ -1,0 +1,16 @@
+# Ignore build output and executables
+dist/
+build/
+*.exe
+
+# Ignore node modules
+node_modules/
+
+# Ignore logs and temp files
+*.log
+temp/
+*.tmp
+
+# Ignore system files
+.DS_Store
+Thumbs.db
