@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Electron build output
+dist/
+out/
+
+# Large media files (too big for git)
+*.mp4
+*.mov
+*.avi
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.local
+*.key
+*.pem
+
+# Temp folders
+"New folder (7)"/
+
+# Lock file (optional - keep package-lock for reproducibility)
+# package-lock.json

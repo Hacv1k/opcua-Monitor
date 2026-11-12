@@ -1,0 +1,91 @@
+{
+  "_comment": "Black Box rule-engine config. Edit this file to add/disable/tune rules without touching main.js. Restart the app after editing. NOT machine learning — every rule here is a simple, explicit heuristic, and is labeled as such in the UI and exported fault packages.",
+
+  "name_based_rules": [
+    {
+      "id": "possible_cavitation",
+      "label": "Possible Cavitation (rule-based)",
+      "enabled": true,
+      "match_any_signal_contains_all": ["pressure", "flow", "current"],
+      "_note": "Fires only if signal names containing all three substrings are present in the same captured event. Works only when channels are named descriptively."
+    },
+    {
+      "id": "possible_overheat",
+      "label": "Possible Overheat (rule-based)",
+      "enabled": true,
+      "match_any_signal_contains_all": ["temp"],
+      "_note": "Fires if any captured signal name contains 'temp'."
+    },
+    {
+      "id": "possible_pressure_anomaly",
+      "label": "Possible Pressure Anomaly (rule-based)",
+      "enabled": true,
+      "match_any_signal_contains_all": ["pressure"],
+      "_note": "Broader than cavitation — fires on 'pressure' alone, without requiring flow/current too."
+    },
+    {
+      "id": "mbtcp_slave_unreachable",
+      "label": "Possible Slave Unreachable (rule-based)",
+      "enabled": true,
+      "match_any_signal_contains_all": ["failedconnection"],
+      "_note": "MBTCP diagnostic rule. Intended use: pair with ActiveConnection=0 in the captured window for a real diagnosis — today this only checks the FailedConnection name is present in the event, not the ActiveConnection value. Treat as a starting tag, not a confirmed root cause."
+    },
+    {
+      "id": "mbtcp_protocol_mismatch",
+      "label": "Possible Protocol/Register Mismatch (rule-based)",
+      "enabled": true,
+      "match_any_signal_contains_all": ["illegalfunction"],
+      "_note": "Modbus exception 0x01 (Illegal Function) reported by the slave."
+    },
+    {
+      "id": "mbtcp_protocol_mismatch_data",
+      "label": "Possible Protocol/Register Mismatch — Illegal Data (rule-based)",
+      "enabled": true,
+      "match_any_signal_contains_all": ["illegaldata"],
+      "_note": "Modbus exception 0x03 (Illegal Data Value)."
+    },
+    {
+      "id": "mbtcp_protocol_mismatch_address",
+      "label": "Possible Protocol/Register Mismatch — Illegal Address (rule-based)",
+      "enabled": true,
+      "match_any_signal_contains_all": ["illegaladdress"],
+      "_note": "Modbus exception 0x02 (Illegal Data Address) — commonly a wrong register address configured on the master."
+    },
+    {
+      "id": "mbtcp_slave_overload",
+      "label": "Possible Slave Overload/Timeout (rule-based)",
+      "enabled": true,
+      "match_any_signal_contains_all": ["requestloss"],
+      "_note": "Intended use: pair with ResponsePerSecond flat/falling in the captured window — today only checks RequestLossPerSecond's name is present, not its trend."
+    },
+    {
+      "id": "mbtcp_slave_fault",
+      "label": "Slave Device Fault — directly reported, not inferred (rule-based)",
+      "enabled": true,
+      "match_any_signal_contains_all": ["slavedevicefailure"],
+      "_note": "Modbus exception 0x04 — the slave itself is reporting an internal fault. This is the one rule that is not a heuristic: if this signal is present and nonzero in the event, the device said so directly."
+    }
+  ],
+
+  "value_based_rules": [
+    {
+      "id": "flatline",
+      "label": "Signal Flatlined (rule-based)",
+      "enabled": true,
+      "type": "no_change_for_duration",
+      "min_seconds": 30,
+      "_note": "Fires if a signal's value does not change at all for at least min_seconds within the captured window. Works regardless of signal naming — useful for generic/unnamed registers. Logic not yet implemented in main.js; schema only for now."
+    },
+    {
+      "id": "spike",
+      "label": "Sudden Spike/Drop (rule-based)",
+      "enabled": true,
+      "type": "rate_of_change_exceeds",
+      "factor": 5,
+      "_note": "Fires if a sample-to-sample change exceeds factor x the signal's recent average step size within the captured window. Works regardless of naming. Logic not yet implemented in main.js; schema only for now."
+    }
+  ],
+
+  "relationship_rules": [],
+  "_relationship_rules_note": "Intentionally empty. Comparing two channels against each other (e.g. 'Channel A should track Channel B within X%') depends entirely on how the user commissions/wires their MBTCP devices — it cannot be guessed from signal names or values alone. This needs an explicit user-defined pairing (e.g. a future config UI or a relationship_rules.json), not a built-in heuristic. Treat as a Phase 2 item."
+}

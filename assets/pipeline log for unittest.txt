@@ -1,0 +1,35 @@
+2025-11-20T10:08:05.0471346Z ##[section]Starting: PublishPipelineArtifact
+2025-11-20T10:08:05.0592824Z ==============================================================================
+2025-11-20T10:08:05.0592946Z Task         : Publish Pipeline Artifacts
+2025-11-20T10:08:05.0593027Z Description  : Publish (upload) a file or directory as a named artifact for the current run
+2025-11-20T10:08:05.0593125Z Version      : 1.242.0
+2025-11-20T10:08:05.0593180Z Author       : Microsoft Corporation
+2025-11-20T10:08:05.0593256Z Help         : https://docs.microsoft.com/azure/devops/pipelines/tasks/utility/publish-pipeline-artifact
+2025-11-20T10:08:05.0593358Z ==============================================================================
+2025-11-20T10:08:07.7209960Z Artifact name input: windows_x64_unittest
+2025-11-20T10:08:07.8018633Z Uploading pipeline artifact from D:\agentProduction\_work\28\a\windows_x64_unittest\ for build #700427
+2025-11-20T10:08:10.4430605Z Using default max parallelism.
+2025-11-20T10:08:10.4430898Z Max dedup parallelism: 192
+2025-11-20T10:08:10.4431084Z DomainId: 0
+2025-11-20T10:08:11.2162327Z ApplicationInsightsTelemetrySender will correlate events with X-TFS-Session 205c89ce-2963-412c-9857-0d636593826f
+2025-11-20T10:08:11.2264107Z Hashtype: Dedup64K
+2025-11-20T10:08:11.2705654Z DedupManifestArtifactClient will correlate http requests with X-TFS-Session 205c89ce-2963-412c-9857-0d636593826f
+2025-11-20T10:08:12.2638098Z 83 files processed.
+2025-11-20T10:08:12.2645094Z Processed 83 files from D:\agentProduction\_work\28\a\windows_x64_unittest\ successfully.
+2025-11-20T10:08:16.3047717Z Uploading 83 files from directory D:\agentProduction\_work\28\a\windows_x64_unittest\.
+2025-11-20T10:08:16.3056326Z Uploaded 31,630,458 out of 519,359,416 bytes.
+2025-11-20T10:08:20.3637173Z Uploaded 137,923,071 out of 519,370,888 bytes
+2025-11-20T10:08:20.3637442Z Content upload is done!
+2025-11-20T10:08:20.3655561Z 
+2025-11-20T10:08:20.3655921Z Content upload statistics:
+2025-11-20T10:08:20.3656302Z Total Content: 1,038.7 MB
+2025-11-20T10:08:20.3656469Z Physical Content Uploaded: 32.0 MB
+2025-11-20T10:08:20.3656623Z Logical Content Uploaded: 137.9 MB
+2025-11-20T10:08:20.3656764Z Compression Saved: 105.9 MB
+2025-11-20T10:08:20.3656895Z Deduplication Saved: 900.8 MB
+2025-11-20T10:08:20.3657041Z Number of Chunks Uploaded: 1,508
+2025-11-20T10:08:20.3657180Z Total Number of Chunks: 19,460
+2025-11-20T10:08:20.3657239Z 
+2025-11-20T10:08:21.0329472Z ApplicationInsightsTelemetrySender correlated 2 events with X-TFS-Session 205c89ce-2963-412c-9857-0d636593826f
+2025-11-20T10:08:21.0352223Z ##[error]Artifact windows_x64_unittest already exists for build 700427.
+2025-11-20T10:08:21.2231576Z ##[section]Finishing: PublishPipelineArtifact
