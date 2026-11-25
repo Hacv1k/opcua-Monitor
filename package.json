@@ -1,0 +1,46 @@
+{
+  "name": "rtom",
+  "version": "2.1.0",
+  "description": "RTOM — Realtime OPC Monitor | Diagnostic Flight Recorder for OPC UA systems",
+  "author": "Vignesh R",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-win": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.abb.rtom",
+    "productName": "RTOM",
+    "copyright": "Copyright © 2026 Vignesh R",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app.js",
+      "features.js",
+      "features-*.js",
+      "index.html",
+      "mobile.html",
+      "rules.json",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/RTOM_logo.ico"
+    },
+    "nsis": {
+      "installerIcon": "assets/RTOM_logo.ico",
+      "uninstallerIcon": "assets/RTOM_logo.ico",
+      "installerHeaderIcon": "assets/RTOM_logo.ico"
+    }
+  },
+  "dependencies": {
+    "node-opcua": "^2.117.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}

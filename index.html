@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>RTOM — Realtime OPC Monitor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #111827; color: #f3f4f6; }
+    .container { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .header { background-color: #1f2937; border-bottom: 1px solid #374151; padding: 0.75rem 1rem; flex-shrink: 0; }
+    .header-content { display: flex; align-items: center; justify-content: space-between; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; }
+    .logo-icon { width: 1.5rem; height: 1.5rem; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 0.375rem; }
+    .logo-text { font-size: 1rem; font-weight: 700; }
+    .header-right { display: flex; align-items: center; gap: 0.75rem; }
+    .status-badge { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; background-color: #374151; border-radius: 9999px; font-size: 0.875rem; }
+    /* Alarm button */
+    .alarm-btn-wrap { position: relative; }
+    .alarm-badge { position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 9999px; font-size: 0.6rem; font-weight: 700; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+    /* Alarm panel */
+    .alarm-panel { position: fixed; right: 0; top: 0; bottom: 0; width: 380px; background: #1f2937; border-left: 1px solid #374151; z-index: 900; display: flex; flex-direction: column; box-shadow: -4px 0 20px rgba(0,0,0,0.5); }
+    .alarm-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: #111827; border-bottom: 1px solid #374151; flex-shrink: 0; }
+    .alarm-panel-title { font-size: 0.9rem; font-weight: 700; color: #f87171; }
+    .alarm-panel-actions { display: flex; gap: 0.5rem; }
+    .alarm-panel-body { flex: 1; overflow-y: auto; }
+    .alarm-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+    .alarm-table th { text-align: left; padding: 0.4rem 0.5rem; background: #374151; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; color: #9ca3af; position: sticky; top: 0; z-index: 10; }
+    /* Historian modal */
+    .historian-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.92); z-index: 1100; display: flex; flex-direction: column; padding: 20px; }
+    .historian-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .historian-modal-title { font-size: 1.1rem; font-weight: 700; color: #a78bfa; }
+    .historian-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 12px; background: #1f2937; padding: 0.75rem; border-radius: 0.375rem; border: 1px solid #374151; }
+    .historian-chart-wrap { flex: 1; position: relative; min-height: 0; background: #111827; border-radius: 0.375rem; overflow: hidden; }
+    .historian-status { font-size: 0.75rem; color: #9ca3af; margin-bottom: 8px; }
+    .main-layout { display: flex; flex: 1; overflow: hidden; }
+    .sidebar { width: 300px; min-width: 300px; background-color: #1f2937; border-right: 1px solid #374151; display: flex; flex-direction: column; overflow: hidden; }
+    .sidebar-section { padding: 0.75rem; border-bottom: 1px solid #374151; }
+    .sidebar-title { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; color: #9ca3af; margin-bottom: 0.5rem; }
+    .input { width: 100%; padding: 0.4rem 0.6rem; background-color: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: #f3f4f6; font-size: 0.8rem; margin-bottom: 0.5rem; }
+    .input:focus { outline: none; border-color: #3b82f6; }
+    .input:disabled { opacity: 0.5; cursor: not-allowed; }
+    .input::placeholder { color: #9ca3af; }
+    select.input { cursor: pointer; }
+    .btn { padding: 0.4rem 0.75rem; border-radius: 0.25rem; font-weight: 500; cursor: pointer; transition: all 0.2s; border: none; font-size: 0.75rem; }
+    .btn-primary { background-color: #3b82f6; color: white; }
+    .btn-primary:hover { background-color: #2563eb; }
+    .btn-danger { background-color: #dc2626; color: white; }
+    .btn-danger:hover { background-color: #b91c1c; }
+    .btn-success { background-color: #16a34a; color: white; }
+    .btn-success:hover { background-color: #15803d; }
+    .btn-secondary { background-color: #4b5563; color: white; }
+    .btn-secondary:hover { background-color: #374151; }
+    .btn-warning { background-color: #d97706; color: white; }
+    .btn-warning:hover { background-color: #b45309; }
+    .btn-alarm { background-color: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+    .btn-alarm:hover { background-color: #991b1b; }
+    .btn-historian { background-color: #2e1065; color: #c4b5fd; border: 1px solid #7c3aed; }
+    .btn-historian:hover { background-color: #3b0764; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-sm { padding: 0.2rem 0.5rem; font-size: 0.65rem; }
+    .tree-container { flex: 1; overflow-y: auto; padding: 0.5rem; font-size: 0.8rem; }
+    .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .content-header { padding: 0.5rem 1rem; border-bottom: 1px solid #374151; background-color: #1f2937; flex-shrink: 0; }
+    .control-panel { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .folder-info { flex: 1; min-width: 120px; }
+    .folder-name { font-size: 0.9rem; font-weight: 600; }
+    .signal-count { font-size: 0.7rem; color: #9ca3af; }
+    .content-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 0.75rem; gap: 0.75rem; }
+    .table-section { flex-shrink: 0; max-height: 200px; overflow: hidden; background-color: #1f2937; border-radius: 0.375rem; }
+    .table-header { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.75rem; background-color: #374151; }
+    .table-header label { font-size: 0.7rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+    .table-container { overflow-y: auto; max-height: 150px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+    th { text-align: left; padding: 0.4rem 0.5rem; background-color: #374151; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; color: #9ca3af; position: sticky; top: 0; z-index: 10; }
+    td { padding: 0.35rem 0.5rem; border-bottom: 1px solid #374151; }
+    tr:last-child td { border-bottom: none; }
+    .graphs-section { flex: 1; min-height: 0; overflow-y: auto; background-color: #1f2937; border-radius: 0.375rem; padding: 0.75rem; }
+    .graphs-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
+    .graphs-header-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .graphs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0.75rem; }
+    .graph-card { background-color: #111827; border-radius: 0.375rem; padding: 0.6rem; border: 1px solid #374151; position: relative; cursor: pointer; }
+    .graph-card:hover { border-color: #6b7280; }
+    .graph-card.pinned { border-color: #f59e0b; border-width: 2px; }
+    .graph-card.alert-high { border-color: #ef4444; background-color: #1f1418; }
+    .graph-card.alert-low { border-color: #3b82f6; background-color: #141820; }
+    .graph-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
+    .graph-title { font-weight: 600; font-size: 0.75rem; color: #e5e7eb; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .graph-actions { display: flex; gap: 0.2rem; }
+    .graph-value-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+    .graph-value { font-size: 1.3rem; font-weight: 700; color: #4ade80; font-family: monospace; }
+    .graph-arrow { font-size: 1rem; }
+    .arrow-up { color: #22c55e; }
+    .arrow-down { color: #ef4444; }
+    .arrow-stable { color: #6b7280; }
+    .graph-stats { display: flex; gap: 0.75rem; font-size: 0.65rem; color: #9ca3af; margin-bottom: 0.4rem; }
+    .graph-stats span { display: flex; align-items: center; gap: 0.2rem; }
+    .stat-min { color: #60a5fa; }
+    .stat-max { color: #f87171; }
+    .stat-avg { color: #a78bfa; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center; color: #9ca3af; flex: 1; }
+    .empty-state h3 { font-size: 1rem; font-weight: 600; color: #f3f4f6; margin-bottom: 0.25rem; }
+    .disconnected-state { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 2rem; text-align: center; }
+    .disconnected-icon { width: 3rem; height: 3rem; background-color: #374151; border-radius: 9999px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem; }
+    .hidden { display: none !important; }
+    .rounded-full { border-radius: 9999px; }
+    .bg-gray-600 { background-color: #4b5563; }
+    .bg-green-500 { background-color: #22c55e; }
+    .w-3 { width: 0.75rem; }
+    .h-3 { height: 0.75rem; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1f2937; }
+    ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    .checkbox-cell { width: 30px; text-align: center; }
+    .checkbox-cell input { cursor: pointer; width: 14px; height: 14px; }
+    .pinned-section { background-color: #1e3a5f; border: 1px solid #3b82f6; border-radius: 0.375rem; padding: 0.5rem; margin-bottom: 0.75rem; }
+    .pinned-title { font-size: 0.7rem; font-weight: 600; color: #60a5fa; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .auto-save-info { font-size: 0.65rem; color: #9ca3af; margin-top: 0.25rem; }
+    .threshold-inputs { display: flex; gap: 0.25rem; margin-top: 0.25rem; }
+    .threshold-inputs input { width: 60px; padding: 0.2rem 0.4rem; font-size: 0.7rem; }
+    .threshold-mini { display: flex; gap: 2px; margin-right: 4px; }
+    .thresh-input { width: 45px !important; padding: 2px 4px !important; font-size: 0.65rem !important; background: #374151; border: 1px solid #4b5563; border-radius: 3px; color: #f3f4f6; }
+    .thresh-input:focus { outline: none; border-color: #3b82f6; }
+    .thresh-input::placeholder { color: #6b7280; }
+    .section-toggle { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 1rem; padding: 0 5px; }
+    .section-toggle:hover { color: #f3f4f6; }
+    .table-section.minimized .table-container { display: none; }
+    .table-section.minimized { max-height: 35px; }
+    /* Zoom Modal */
+    .zoom-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; flex-direction: column; padding: 20px; }
+    .zoom-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .zoom-modal-title { font-size: 1.2rem; font-weight: bold; }
+    .zoom-modal-close { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+    .zoom-modal-stats { display: flex; gap: 2rem; margin-bottom: 15px; font-size: 1rem; }
+    .zoom-modal-body { flex: 1; position: relative; }
+    .zoom-modal-body canvas { width: 100% !important; height: 100% !important; }
+    /* Sampling rate label */
+    .rate-label { font-size: 0.65rem; color: #6b7280; background: #374151; padding: 2px 6px; border-radius: 9999px; }
+    /* Event Capture ("Black Box") */
+    .btn-event { background-color: #064e3b; color: #6ee7b7; border: 1px solid #10b981; }
+    .btn-event:hover { background-color: #065f46; }
+    .event-btn-wrap { position: relative; }
+    .event-badge { position: absolute; top: -6px; right: -6px; background: #10b981; color: #052e1f; border-radius: 9999px; font-size: 0.6rem; font-weight: 700; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+    .event-badge.capturing { background: #ef4444; color: white; animation: eventPulse 1s infinite; }
+    @keyframes eventPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .event-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.92); z-index: 1200; display: flex; flex-direction: column; padding: 20px; }
+    .event-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .event-modal-title { font-size: 1.1rem; font-weight: 700; color: #6ee7b7; }
+    .event-layout { flex: 1; display: flex; gap: 12px; min-height: 0; overflow: hidden; }
+    .event-list { width: 320px; min-width: 320px; background: #1f2937; border-radius: 0.375rem; border: 1px solid #374151; overflow-y: auto; padding: 8px; }
+    .event-list-item { background: #111827; border: 1px solid #374151; border-radius: 0.375rem; padding: 0.6rem; margin-bottom: 0.5rem; cursor: pointer; }
+    .event-list-item:hover { border-color: #10b981; }
+    .event-list-item.selected { border-color: #10b981; border-width: 2px; }
+    .event-list-item-title { font-size: 0.8rem; font-weight: 600; color: #e5e7eb; margin-bottom: 0.2rem; }
+    .event-list-item-meta { font-size: 0.65rem; color: #9ca3af; }
+    .event-list-item.acknowledged { opacity: 0.55; }
+    .event-ack-tag { background: #1f4d3d; color: #6ee7b7; font-size: 0.55rem; font-weight: 700; padding: 1px 5px; border-radius: 9999px; margin-left: 4px; vertical-align: middle; }
+    .event-list-item-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+    .event-ack-btn, .event-clear-btn { font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; cursor: pointer; border: 1px solid; }
+    .event-ack-btn { background: #1f4d3d; color: #6ee7b7; border-color: #10b981; }
+    .event-ack-btn:hover { background: #155e44; }
+    .event-clear-btn { background: #4c1d1d; color: #fca5a5; border-color: #ef4444; }
+    .event-clear-btn:hover { background: #5c2424; }
+    .event-pattern-tag { display: inline-block; background: #78350f; color: #fcd34d; font-size: 0.6rem; padding: 1px 6px; border-radius: 9999px; margin-top: 0.3rem; margin-right: 0.3rem; }
+    .event-detail { flex: 1; display: flex; flex-direction: column; background: #1f2937; border-radius: 0.375rem; border: 1px solid #374151; padding: 0.75rem; min-width: 0; }
+    .event-detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem; }
+    .event-replay-chart-wrap { flex: 1; position: relative; min-height: 0; background: #111827; border-radius: 0.375rem; overflow-y: auto; margin-bottom: 0.5rem; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+    .event-replay-group { background: #1f2937; border: 1px solid #374151; border-radius: 0.375rem; padding: 8px; flex-shrink: 0; }
+    .event-replay-group-title { font-size: 0.7rem; font-weight: 600; color: #9ca3af; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .event-replay-group-canvas-wrap { height: 140px; position: relative; }
+    .event-replay-controls { display: flex; align-items: center; gap: 0.5rem; background: #111827; border-radius: 0.375rem; padding: 0.5rem; }
+    .event-replay-slider { flex: 1; }
+    .event-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; color: #6b7280; text-align: center; }
+    /* Connection Modal */
+    .connection-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); z-index: 1300; display: flex; align-items: center; justify-content: center; }
+    .connection-modal-box { background: #1f2937; border: 1px solid #374151; border-radius: 0.5rem; width: 420px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.6); max-height: 85vh; overflow-y: auto; }
+    .connection-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #374151; }
+    .connection-modal-title { font-size: 1.05rem; font-weight: 700; color: #f3f4f6; display: flex; align-items: center; gap: 0.5rem; }
+    .connection-modal-body { padding: 1.25rem; }
+    /* Collapsed connection bar (shown in sidebar after connecting) */
+    .connection-bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background-color: #111827; border-bottom: 1px solid #374151; cursor: pointer; flex-shrink: 0; }
+    .connection-bar:hover { background-color: #1a2332; }
+    .connection-bar-dot { width: 0.55rem; height: 0.55rem; border-radius: 9999px; flex-shrink: 0; }
+    .connection-bar-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: #d1d5db; }
+    .connection-bar-chevron { color: #6b7280; font-size: 0.7rem; }
+    /* RTOM Assistant Chat */
+    .btn-chat { background-color: #1e3a5f; color: #93c5fd; border: 1px solid #3b82f6; }
+    .btn-chat:hover { background-color: #1e40af; }
+    .chat-btn-wrap { position: relative; }
+    .chat-badge { position: absolute; top: -6px; right: -6px; background: #3b82f6; color: white; border-radius: 9999px; font-size: 0.6rem; font-weight: 700; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+    .chat-panel { position: fixed; right: 0; bottom: 0; width: 380px; height: 520px; background: #1f2937; border-left: 1px solid #374151; border-top: 1px solid #374151; z-index: 1400; display: flex; flex-direction: column; box-shadow: -4px -4px 20px rgba(0,0,0,0.5); border-radius: 0.5rem 0 0 0; }
+    .chat-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: #111827; border-bottom: 1px solid #374151; flex-shrink: 0; border-radius: 0.5rem 0 0 0; }
+    .chat-panel-title { font-size: 0.9rem; font-weight: 700; color: #93c5fd; display: flex; align-items: center; gap: 0.5rem; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.6rem; }
+    .chat-msg { max-width: 88%; padding: 0.5rem 0.75rem; border-radius: 0.5rem; font-size: 0.78rem; line-height: 1.45; word-break: break-word; }
+    .chat-msg.user { align-self: flex-end; background: #1d4ed8; color: #eff6ff; border-bottom-right-radius: 2px; }
+    .chat-msg.bot { align-self: flex-start; background: #374151; color: #f3f4f6; border-bottom-left-radius: 2px; }
+    .chat-msg.bot strong { color: #93c5fd; }
+    .chat-input-row { display: flex; gap: 0.5rem; padding: 0.75rem; border-top: 1px solid #374151; flex-shrink: 0; }
+    .chat-input { flex: 1; padding: 0.45rem 0.6rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.375rem; color: #f3f4f6; font-size: 0.78rem; }
+    .chat-input:focus { outline: none; border-color: #3b82f6; }
+    .chat-input::placeholder { color: #6b7280; }
+    .chat-send-btn { padding: 0.45rem 0.75rem; background: #1d4ed8; color: white; border: none; border-radius: 0.375rem; cursor: pointer; font-size: 0.78rem; font-weight: 600; }
+    .chat-send-btn:hover { background: #1e40af; }
+    .chat-suggestions { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0 0.75rem 0.5rem; flex-shrink: 0; }
+    .chat-suggestion { font-size: 0.65rem; padding: 3px 8px; background: #1e3a5f; color: #93c5fd; border: 1px solid #3b82f6; border-radius: 9999px; cursor: pointer; white-space: nowrap; }
+    .chat-suggestion:hover { background: #1e40af; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <img src="assets/RTOM_logo.png" alt="RTOM" style="height:38px;width:auto;object-fit:contain;display:block;">
+        </div>
+        <div class="header-right">
+          <!-- RTOM Assistant Chat Button -->
+          <div class="chat-btn-wrap">
+            <button id="chatBtn" class="btn btn-chat btn-sm">💬 Assistant</button>
+            <span id="chatBadge" class="chat-badge hidden">!</span>
+          </div>
+          <!-- Event Capture ("Black Box") Button -->
+          <div class="event-btn-wrap">
+            <button id="eventPanelBtn" class="btn btn-event btn-sm">📽️ Black Box</button>
+            <span id="eventBadge" class="event-badge hidden">0</span>
+          </div>
+          <!-- Historian Button -->
+          <button id="historianBtn" class="btn btn-historian btn-sm">📈 History</button>
+          <!-- Alarm Button -->
+          <div class="alarm-btn-wrap">
+            <button id="alarmPanelBtn" class="btn btn-alarm btn-sm">🔔 Alarms</button>
+            <span id="alarmBadge" class="alarm-badge hidden">0</span>
+          </div>
+          <div class="status-badge">
+            <div id="statusIndicator" class="w-3 h-3 rounded-full bg-gray-600"></div>
+            <span id="statusText">Disconnected</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      <aside class="sidebar">
+        <!-- Collapsed connection bar: click to reopen the Connection modal -->
+        <div class="connection-bar" id="connectionBar" title="Click to open connection settings">
+          <div id="connectionBarDot" class="connection-bar-dot" style="background-color:#4b5563;"></div>
+          <span id="connectionBarText" class="connection-bar-text">Not connected — click to set up</span>
+          <span class="connection-bar-chevron">⚙️</span>
+        </div>
+
+        <div class="sidebar-section" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <div class="sidebar-title">Node Browser</div>
+          <div id="nodeTree" class="tree-container"></div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div id="mainContent" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
+          <div id="controlPanel" class="content-header hidden">
+            <div class="control-panel">
+              <div class="folder-info">
+                <div id="folderName" class="folder-name">Select a Folder</div>
+                <div id="signalCount" class="signal-count">0 signals</div>
+              </div>
+              <select id="timeRange" class="input" style="width: auto; margin-bottom: 0;">
+                <option value="60">1 min</option>
+                <option value="300">5 min</option>
+                <option value="600" selected>10 min</option>
+                <option value="900">15 min</option>
+                <option value="1800">30 min</option>
+                <option value="3600">1 hour</option>
+              </select>
+              <button id="exportCsvBtn" class="btn btn-secondary">CSV</button>
+              <button id="exportImgBtn" class="btn btn-secondary">Snapshot</button>
+              <button id="popoutAllBtn" class="btn btn-secondary">Popout</button>
+              <button id="monitorBtn" class="btn btn-success">Start</button>
+              <button id="stopMonitorBtn" class="btn btn-danger">Stop</button>
+              <span id="samplingRateLabel" class="rate-label"></span>
+            </div>
+          </div>
+
+          <div class="content-body">
+            <div id="emptyState" class="empty-state">
+              <h3>Select a Folder</h3>
+              <p>Browse the node tree to view signals</p>
+            </div>
+
+            <div class="table-section" id="tableSection" style="display: none;">
+              <div class="table-header">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <button class="section-toggle" id="toggleSignals" title="Minimize/Maximize">▼</button>
+                  <span style="font-size: 0.7rem; font-weight: 600;">Signals</span>
+                </div>
+                <label><input type="checkbox" id="selectAllCheckbox" checked> Select All</label>
+              </div>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th class="checkbox-cell">Show</th>
+                      <th class="checkbox-cell">Pin</th>
+                      <th>Signal</th>
+                      <th>Value</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="signalTable"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="graphs-section" id="graphsSection" style="display: none;">
+              <div class="graphs-header">
+                <div class="graphs-header-left">
+                  <span style="font-size: 0.75rem; font-weight: 600;">Live Graphs</span>
+                  <span id="pinnedCount" style="font-size: 0.65rem; color: #f59e0b;"></span>
+                </div>
+                <button id="clearBtn" class="btn btn-secondary btn-sm">Clear</button>
+              </div>
+              <div id="pinnedSection" class="pinned-section hidden">
+                <div class="pinned-title"><span>📌</span> Pinned Graphs</div>
+                <div id="pinnedContainer" class="graphs-grid"></div>
+              </div>
+              <div id="graphsContainer" class="graphs-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="disconnectedState" class="disconnected-state">
+          <div class="disconnected-icon"><span style="font-size: 1.5rem;">🔗</span></div>
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Not Connected</h3>
+          <p style="color: #9ca3af; font-size: 0.875rem;">Enter endpoint and click Connect</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Zoom Modal -->
+  <div id="zoomModal" class="zoom-modal hidden">
+    <div class="zoom-modal-header">
+      <div class="zoom-modal-title" id="zoomTitle">Signal Name</div>
+      <button class="zoom-modal-close" id="zoomClose">Close (ESC)</button>
+    </div>
+    <div class="zoom-modal-stats" id="zoomStats"></div>
+    <div class="zoom-modal-body">
+      <canvas id="zoomChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Connection Modal -->
+  <div id="connectionModal" class="connection-modal">
+    <div class="connection-modal-box">
+      <div class="connection-modal-header">
+        <div class="connection-modal-title">🔌 Connect to OPC UA Server</div>
+        <button class="zoom-modal-close" id="connectionModalCloseBtn" title="Close (only available once connected)">✕</button>
+      </div>
+      <div class="connection-modal-body">
+        <div class="sidebar-title">Server name</div>
+        <input type="text" id="serverName" class="input" placeholder="e.g. Main PLC" value="Main" maxlength="20">
+        <div class="sidebar-title">Connection</div>
+        <input type="text" id="endpoint" class="input" placeholder="opc.tcp://127.0.0.1:48010" value="opc.tcp://127.0.0.1:48010">
+        <input type="text" id="username" class="input" placeholder="Username (optional)">
+        <input type="password" id="password" class="input" placeholder="Password (optional)">
+
+        <div class="sidebar-title" style="margin-top: 0.5rem;">Sampling Interval</div>
+        <select id="samplingInterval" class="input">
+          <option value="500">500 ms</option>
+          <option value="1000" selected>1 s</option>
+          <option value="2000">2 s</option>
+          <option value="5000">5 s</option>
+          <option value="10000">10 s</option>
+          <option value="30000">30 s</option>
+        </select>
+
+        <div class="sidebar-title" style="margin-top: 0.5rem;">Auto-Save CSV Path</div>
+        <input type="text" id="autoSavePath" class="input" placeholder="C:\OPCData (optional)">
+        <div class="auto-save-info">CSV saved hourly to this folder</div>
+
+        <div class="sidebar-title" style="margin-top: 0.5rem;">Thresholds (Global)</div>
+        <div class="threshold-inputs">
+          <input type="number" id="globalMinThreshold" class="input" placeholder="Min" title="Alert when below this value">
+          <input type="number" id="globalMaxThreshold" class="input" placeholder="Max" title="Alert when above this value">
+        </div>
+        <button id="connectBtn" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alarm Panel -->
+  <div id="alarmPanel" class="alarm-panel hidden">
+    <div class="alarm-panel-header">
+      <div class="alarm-panel-title">🔔 Alarm Log</div>
+      <div class="alarm-panel-actions">
+        <button id="alarmClearBtn" class="btn btn-secondary btn-sm">Clear All</button>
+        <button id="alarmCloseBtn" class="btn btn-danger btn-sm">✕</button>
+      </div>
+    </div>
+    <div class="alarm-panel-body">
+      <table class="alarm-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Signal</th>
+            <th>Value</th>
+            <th>Type</th>
+            <th>Threshold</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="alarmTableBody">
+          <tr><td colspan="6" style="text-align:center;color:#6b7280;padding:1rem;">No alarms yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Historian Modal -->
+  <div id="historianModal" class="historian-modal hidden">
+    <div class="historian-modal-header">
+      <div class="historian-modal-title">📈 Historian Viewer</div>
+      <button id="histCloseBtn" class="zoom-modal-close">Close (ESC)</button>
+    </div>
+    <div class="historian-controls">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:0.65rem;color:#9ca3af;text-transform:uppercase;">Signal</label>
+        <select id="histSignalSelect" class="input" style="width:220px;margin-bottom:0;">
+          <option value="">— All Signals —</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:0.65rem;color:#9ca3af;text-transform:uppercase;">From</label>
+        <input type="datetime-local" id="histStartDate" class="input" style="width:190px;margin-bottom:0;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:0.65rem;color:#9ca3af;text-transform:uppercase;">To</label>
+        <input type="datetime-local" id="histEndDate" class="input" style="width:190px;margin-bottom:0;">
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:flex-end;">
+        <button id="histLoadBtn" class="btn btn-primary">Load</button>
+        <button id="histExportBtn" class="btn btn-secondary">Export CSV</button>
+      </div>
+      <div id="histStatus" class="historian-status" style="margin-left:auto;"></div>
+    </div>
+    <div class="historian-chart-wrap">
+      <canvas id="historianChart" style="width:100%;height:100%;"></canvas>
+    </div>
+  </div>
+
+  <!-- Event Capture ("Black Box") Modal -->
+  <div id="eventModal" class="event-modal hidden">
+    <div class="event-modal-header">
+      <div class="event-modal-title">📽️ Black Box — Event Capture &amp; Replay</div>
+      <button id="eventCloseBtn" class="zoom-modal-close">Close (ESC)</button>
+    </div>
+    <div class="event-layout">
+      <div class="event-list" id="eventList">
+        <!-- populated by app.js -->
+      </div>
+      <div class="event-detail" id="eventDetail">
+        <div class="event-empty" id="eventEmptyState">
+          <h3 style="color:#9ca3af;font-size:1rem;margin-bottom:0.5rem;">No event selected</h3>
+          <p style="font-size:0.8rem;max-width:320px;">Set a threshold on any live graph, or wait for one to trip. Captured incidents will appear in the list on the left — 30s before / post-trigger window, replayable on a timeline.</p>
+        </div>
+        <div id="eventDetailContent" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+          <div class="event-detail-header">
+            <div>
+              <div id="eventDetailTitle" style="font-size:0.95rem;font-weight:700;color:#f3f4f6;"></div>
+              <div id="eventDetailMeta" style="font-size:0.7rem;color:#9ca3af;margin-top:2px;"></div>
+              <div id="eventDetailPatterns"></div>
+            </div>
+            <div style="display:flex;gap:0.5rem;">
+              <button id="eventExportBtn" class="btn btn-secondary btn-sm">⬇️ Export Fault Package</button>
+            </div>
+          </div>
+          <div class="event-replay-chart-wrap" id="eventReplayChartWrap">
+            <!-- populated by app.js: one .event-replay-group block per value-range cluster -->
+          </div>
+          <div class="event-replay-controls">
+            <button id="eventPlayBtn" class="btn btn-success btn-sm">▶️ Play</button>
+            <input type="range" id="eventReplaySlider" class="event-replay-slider" min="0" max="100" value="0">
+            <span id="eventReplayTimeLabel" style="font-size:0.7rem;color:#9ca3af;min-width:70px;text-align:right;">--:--:--</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RTOM Assistant Chat Panel -->
+  <div id="chatPanel" class="chat-panel hidden">
+    <div class="chat-panel-header">
+      <div class="chat-panel-title">🤖 RTOM Assistant</div>
+      <button id="chatCloseBtn" class="zoom-modal-close" style="font-size:0.75rem;padding:4px 10px;">Close</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-suggestions" id="chatSuggestions">
+      <span class="chat-suggestion">What signals are monitored?</span>
+      <span class="chat-suggestion">Any active alarms?</span>
+      <span class="chat-suggestion">Set max for FailedConnection to 50</span>
+      <span class="chat-suggestion">Clear all alarms</span>
+      <span class="chat-suggestion">How many events captured?</span>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" class="chat-input" placeholder="Ask about any signal, alarm, or event…">
+      <button id="chatSendBtn" class="chat-send-btn">Send</button>
+    </div>
+  </div>
+
+  <script src="assets/chart.min.js"></script>
+  <script>if (typeof Chart !== 'undefined') console.log('Chart.js loaded'); else console.error('Chart.js failed!');</script>
+  <script src="app.js"></script>
+  <script src="features.js"></script>
+  <script src="features-rules.js"></script>
+  <script src="features-alerts.js"></script>
+  <script src="features-servers.js"></script>
+</body>
+</html>

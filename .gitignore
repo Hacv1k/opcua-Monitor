@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Electron build output
+dist/
+out/
+
+# Large media files (too big for git)
+*.mp4
+*.mov
+*.avi
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.local
+*.key
+*.pem
+
+# Temp / backup folders
+New folder*/
+_backup_before_batch1/
+
+# Helper scripts, decks and screenshots that are not part of the app
+fix_chat_strings.js
+insert_screenshots.py
+insert_mobile_screenshots.py
+make_mobile_video.py
+*.pptx
+
+# Lock file (optional - keep package-lock for reproducibility)
+# package-lock.json

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#CC0000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RTOM">
+<title>RTOM Mobile</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh}
+.header{background:#111;border-bottom:3px solid #CC0000;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-left{display:flex;align-items:center;gap:10px}
+.logo{font-size:20px;font-weight:900;color:#fff;letter-spacing:2px}
+.logo span{color:#CC0000}
+.status-dot{width:10px;height:10px;border-radius:50%;background:#6b7280}
+.status-dot.connected{background:#22c55e}
+.conn-label{font-size:11px;color:#9ca3af}
+.tabs{display:flex;background:#111;border-bottom:1px solid #1f2937;overflow-x:auto}
+.tab{flex:1;min-width:64px;padding:12px 4px;text-align:center;font-size:11px;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.tab.active{color:#CC0000;border-bottom-color:#CC0000}
+.tab-icon{font-size:18px;display:block;margin-bottom:2px}
+.content{padding:12px;max-width:600px;margin:0 auto}
+.card{background:#1e293b;border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid #334155}
+.card-title{font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:600}
+.signal-name{font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:2px}
+.signal-value{font-size:28px;font-weight:900;color:#fff;line-height:1}
+.signal-time{font-size:11px;color:#64748b;margin-top:4px}
+.badge{display:inline-block;padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700}
+.badge-high{background:#4c1d1d;color:#fca5a5}
+.badge-low{background:#1c3a5e;color:#93c5fd}
+.badge-ack{background:#1f4d3d;color:#6ee7b7}
+.alarm-row{border-bottom:1px solid #334155;padding:10px 0}
+.alarm-row:last-child{border-bottom:none}
+.alarm-signal{font-size:13px;font-weight:700;color:#e2e8f0}
+.alarm-meta{font-size:11px;color:#94a3b8;margin-top:2px}
+.alarm-actions{display:flex;gap:6px;margin-top:8px}
+.btn{padding:6px 12px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer}
+.btn-ack{background:#1f4d3d;color:#6ee7b7}
+.event-row{border-bottom:1px solid #334155;padding:12px 0}
+.event-row:last-child{border-bottom:none}
+.event-signal{font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:4px}
+.event-meta{font-size:11px;color:#94a3b8;margin-bottom:6px}
+.pattern-tag{display:inline-block;background:#1e3a5f;color:#93c5fd;font-size:10px;padding:2px 7px;border-radius:9999px;margin:2px 2px 0 0;border:1px solid #3b82f6}
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 160px)}
+.chat-messages{flex:1;overflow-y:auto;padding:8px 0;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:85%;padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.45;word-break:break-word;white-space:pre-wrap}
+.msg.user{align-self:flex-end;background:#1d4ed8;color:#eff6ff;border-bottom-right-radius:3px}
+.msg.bot{align-self:flex-start;background:#1e293b;color:#f1f5f9;border-bottom-left-radius:3px;border:1px solid #334155}
+.chat-input-row{display:flex;gap:8px;padding:10px 0;border-top:1px solid #334155}
+.chat-input{flex:1;padding:10px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:13px}
+.chat-input:focus{outline:none;border-color:#CC0000}
+.chat-send{padding:10px 16px;background:#CC0000;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
+.suggestions{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.sug{background:#1e293b;border:1px solid #334155;color:#94a3b8;font-size:11px;padding:5px 10px;border-radius:9999px;cursor:pointer}
+.empty{text-align:center;color:#4b5563;padding:40px 20px;font-size:13px}
+.refresh-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.refresh-time{font-size:11px;color:#64748b}
+.ref-btn{font-size:11px;padding:4px 10px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;cursor:pointer}
+.recording-badge{display:flex;align-items:center;gap:5px;background:#4c1d1d;border:1px solid #CC0000;border-radius:6px;padding:6px 10px;margin-bottom:10px;font-size:12px;color:#fca5a5;font-weight:700}
+.rec-dot{width:8px;height:8px;border-radius:50%;background:#CC0000;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.gcard{padding:12px 12px 8px}
+.graph-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.graph-val{font-size:22px;font-weight:900}
+.gcard canvas{width:100%;height:170px;display:block}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="logo">R<span>T</span>OM</div>
+    <div>
+      <div style="display:flex;align-items:center;gap:5px">
+        <div class="status-dot" id="statusDot"></div>
+        <div class="conn-label" id="connLabel">Disconnected</div>
+      </div>
+      <div class="conn-label" id="runLabel" style="margin-top:2px"></div>
+    </div>
+  </div>
+  <div class="ref-btn" onclick="refresh()">Refresh</div>
+</div>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('signals')" id="tab-signals"><span class="tab-icon">&#128225;</span>Signals</div>
+  <div class="tab" onclick="switchTab('graphs')" id="tab-graphs"><span class="tab-icon">&#128200;</span>Graphs</div>
+  <div class="tab" onclick="switchTab('alarms')" id="tab-alarms"><span class="tab-icon">&#128276;</span>Alarms</div>
+  <div class="tab" onclick="switchTab('events')" id="tab-events"><span class="tab-icon">&#127910;</span>Black Box</div>
+  <div class="tab" onclick="switchTab('chat')" id="tab-chat"><span class="tab-icon">&#128172;</span>Assistant</div>
+</div>
+<div class="content" id="content"></div>
+<script>
+var state={connected:false,pinnedSignals:[],alarms:[],events:[],active:null};
+var currentTab='signals';
+var lastRefresh=null;
+var authNeeded=false;
+var chatLog=[{r:'bot',t:'Hello! Ask me about any signal, alarm or Black Box event. You can also give commands, e.g. "set max for ActiveConnection to 6" or "clear all alarms".'}];
+
+// ---- PIN handling: the desktop link carries ?token=PIN; it is saved on this phone ----
+var TOKEN='';
+try{TOKEN=localStorage.getItem('rtomToken')||'';}catch(e){}
+(function(){
+  var m=/[?&]token=([^&]*)/.exec(location.search);
+  if(m){
+    try{TOKEN=decodeURIComponent(m[1]);}catch(e){TOKEN=m[1];}
+    try{localStorage.setItem('rtomToken',TOKEN);}catch(e){}
+    try{history.replaceState(null,'',location.pathname);}catch(e){}
+  }
+})();
+
+async function api(path,opts){
+  opts=opts||{};
+  opts.headers=Object.assign({},opts.headers||{},{'X-RTOM-Token':TOKEN});
+  var r=await fetch(path,opts);
+  if(r.status===401||r.status===429){var err=new Error('auth');err.status=r.status;throw err;}
+  return r.json();
+}
+
+function showLogin(msg){
+  authNeeded=true;
+  var dot=document.getElementById('statusDot');
+  if(dot) dot.className='status-dot';
+  document.getElementById('connLabel').textContent='Locked';
+  document.getElementById('content').innerHTML=
+    '<div class="card"><div class="card-title">Enter PIN</div>'+
+    '<div style="font-size:13px;color:#94a3b8;margin-bottom:10px">The PIN is shown in RTOM on the laptop: header &rarr; Mobile.</div>'+
+    (msg?'<div style="color:#fca5a5;font-size:12px;margin-bottom:8px">'+esc(msg)+'</div>':'')+
+    '<input id="pinInput" class="chat-input" style="width:100%;margin-bottom:10px" type="password" inputmode="numeric" placeholder="PIN" onkeydown="if(event.key===\'Enter\')submitPin()">'+
+    '<button class="chat-send" style="width:100%" onclick="submitPin()">Unlock</button></div>';
+}
+
+function submitPin(){
+  var el=document.getElementById('pinInput');
+  var v=(el?el.value:'').trim();
+  if(!v) return;
+  TOKEN=v;
+  try{localStorage.setItem('rtomToken',TOKEN);}catch(e){}
+  authNeeded=false;
+  fetchState();
+}
+
+async function fetchState(){
+  if(authNeeded) return;
+  try{
+    var d=await api('/api/state');
+    state.connected=d.connected;
+    state.pinnedSignals=d.pinnedSignals||[];
+    state.alarms=d.alarms||[];
+    state.events=d.events||[];
+    state.active=d.activeCapture;
+    state.runElapsedMs=(typeof d.monitoringElapsedMs==='number')?d.monitoringElapsedMs:null;
+    state.runReceivedAt=Date.now();
+    lastRefresh=new Date();
+    checkNewAlarms();
+    renderTab();
+  }catch(e){
+    if(e.status===401){showLogin(TOKEN?'Wrong PIN.':'');return;}
+    if(e.status===429){showLogin('Too many wrong PINs. Wait a few minutes and try again.');return;}
+    document.getElementById('connLabel').textContent='Cannot reach RTOM';
+  }
+}
+
+function refresh(){ fetchState(); }
+
+// ---- In-page alarm alert: banner + vibration + beep when a NEW alarm appears (page must be open) ----
+var seenAlarms=null, audioCtx=null;
+function beep(){
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.frequency.value=880;g.gain.value=0.15;o.connect(g);g.connect(audioCtx.destination);
+    o.start();o.stop(audioCtx.currentTime+0.35);
+  }catch(e){}
+}
+function checkNewAlarms(){
+  var ids={};
+  (state.alarms||[]).forEach(function(a){ids[a.id]=a;});
+  if(seenAlarms===null){seenAlarms=ids;return;}
+  var fresh=(state.alarms||[]).filter(function(a){return !seenAlarms[a.id]&&!a.acknowledged;});
+  seenAlarms=ids;
+  if(!fresh.length) return;
+  var a=fresh[0];
+  var b=document.getElementById('alarmBanner');
+  if(!b){
+    b=document.createElement('div');b.id='alarmBanner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999;background:#CC0000;color:#fff;padding:12px 16px;font-size:13px;font-weight:700;text-align:center';
+    b.onclick=function(){b.remove();switchTab('alarms');};
+    document.body.appendChild(b);
+  }
+  b.textContent='🔔 '+(a.signalName||'Alarm')+' '+(a.type==='high'?'HIGH':'LOW')+' ('+a.value+')'+(fresh.length>1?' +'+(fresh.length-1)+' more':'')+' — tap to view';
+  try{navigator.vibrate&&navigator.vibrate([300,150,300]);}catch(e){}
+  beep();
+  try{document.title='🔔 RTOM ALARM';}catch(e){}
+}
+document.addEventListener('click',function(){try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();}catch(e){}},{once:true});
+
+function switchTab(t){
+  currentTab=t;
+  document.querySelectorAll('.tab').forEach(function(el){el.classList.remove('active');});
+  document.getElementById('tab-'+t).classList.add('active');
+  if(authNeeded){showLogin('');return;}
+  if(t==='chat') renderChat(); else renderTab();
+}
+
+function renderTab(){
+  var dot=document.getElementById('statusDot');
+  var lbl=document.getElementById('connLabel');
+  if(dot) dot.className='status-dot'+(state.connected?' connected':'');
+  if(lbl) lbl.textContent=state.connected?'Connected':'Disconnected';
+  if(currentTab==='signals') renderSignals();
+  else if(currentTab==='graphs') renderGraphs();
+  else if(currentTab==='alarms') renderAlarms();
+  else if(currentTab==='events') renderEvents();
+}
+
+function fmt(d){if(!d)return'-';var x=new Date(d);return isNaN(x.getTime())?String(d):x.toLocaleTimeString();}
+function esc(s){return String(s===undefined||s===null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function renderSignals(){
+  var h='';
+  h+='<div class="refresh-bar"><span class="refresh-time">Updated: '+(lastRefresh?lastRefresh.toLocaleTimeString():'-')+'</span></div>';
+  if(state.active){
+    h+='<div class="recording-badge"><div class="rec-dot"></div>RECORDING: '+esc(state.active.triggerSignalName||'')+'</div>';
+  }
+  if(!state.pinnedSignals||!state.pinnedSignals.length){
+    h+='<div class="empty">No pinned signals.<br><br>Pin signals in the RTOM desktop app first.</div>';
+  } else {
+    state.pinnedSignals.forEach(function(s){
+      h+='<div class="card">';
+      h+='<div class="card-title">Pinned Signal</div>';
+      h+='<div class="signal-name">'+esc(s.name)+'</div>';
+      var v=s.value;
+      h+='<div class="signal-value">'+(typeof v==='number'?v.toFixed(3):'&mdash;')+'</div>';
+      h+='<div class="signal-time">'+fmt(s.timestamp)+'</div>';
+      h+='</div>';
+    });
+  }
+  document.getElementById('content').innerHTML=h;
+}
+
+var CHART_COLORS=['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+
+function drawChart(cv,pts,mn,mx,color){
+  var dpr=window.devicePixelRatio||1;
+  var w=cv.clientWidth,h=cv.clientHeight;
+  if(!w||!h) return;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  var c=cv.getContext('2d');
+  c.scale(dpr,dpr);
+  c.clearRect(0,0,w,h);
+  pts=(pts||[]).filter(function(p){return typeof p.v==='number'&&!isNaN(p.v);});
+  if(pts.length<2){c.fillStyle='#64748b';c.font='12px sans-serif';c.fillText('Waiting for data...',10,h/2);return;}
+  var vals=pts.map(function(p){return p.v;});
+  var lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals);
+  if(typeof mn==='number'&&!isNaN(mn)) lo=Math.min(lo,mn);
+  if(typeof mx==='number'&&!isNaN(mx)) hi=Math.max(hi,mx);
+  if(hi===lo){hi+=1;lo-=1;}
+  var pad=(hi-lo)*0.1;lo-=pad;hi+=pad;
+  var L=38,R=8,T=8,B=18,pw=w-L-R,ph=h-T-B;
+  function X(i){return L+pw*i/(pts.length-1);}
+  function Y(v){return T+ph*(1-(v-lo)/(hi-lo));}
+  c.lineWidth=1;c.strokeStyle='#334155';c.fillStyle='#64748b';c.font='10px sans-serif';c.textAlign='right';
+  for(var g=0;g<=3;g++){var gv=lo+(hi-lo)*g/3,gy=Y(gv);c.beginPath();c.moveTo(L,gy);c.lineTo(w-R,gy);c.stroke();c.fillText(gv.toFixed(1),L-4,gy+3);}
+  c.setLineDash([5,4]);
+  if(typeof mx==='number'&&!isNaN(mx)){c.strokeStyle='#ef4444';c.beginPath();c.moveTo(L,Y(mx));c.lineTo(w-R,Y(mx));c.stroke();}
+  if(typeof mn==='number'&&!isNaN(mn)){c.strokeStyle='#60a5fa';c.beginPath();c.moveTo(L,Y(mn));c.lineTo(w-R,Y(mn));c.stroke();}
+  c.setLineDash([]);
+  c.beginPath();
+  pts.forEach(function(p,i){if(i===0)c.moveTo(X(i),Y(p.v));else c.lineTo(X(i),Y(p.v));});
+  c.strokeStyle=color;c.lineWidth=2;c.stroke();
+  c.lineTo(X(pts.length-1),T+ph);c.lineTo(X(0),T+ph);c.closePath();
+  c.globalAlpha=0.12;c.fillStyle=color;c.fill();c.globalAlpha=1;
+  c.fillStyle='#64748b';c.font='10px sans-serif';
+  c.textAlign='left';c.fillText(String(pts[0].t),L,h-4);
+  c.textAlign='right';c.fillText(String(pts[pts.length-1].t),w-R,h-4);
+}
+
+function renderGraphs(){
+  var sigs=state.pinnedSignals||[];
+  var h='<div class="refresh-bar"><span class="refresh-time">Live graphs &middot; updated '+(lastRefresh?lastRefresh.toLocaleTimeString():'-')+'</span></div>';
+  if(state.active){h+='<div class="recording-badge"><div class="rec-dot"></div>RECORDING: '+esc(state.active.triggerSignalName||'')+'</div>';}
+  if(!sigs.length){
+    h+='<div class="empty">No pinned signals.<br><br>Pin signals in the RTOM desktop app first.</div>';
+    document.getElementById('content').innerHTML=h;
+    return;
+  }
+  sigs.forEach(function(s,i){
+    var col=CHART_COLORS[i%CHART_COLORS.length];
+    var v=s.value;
+    h+='<div class="card gcard"><div class="graph-head"><div class="signal-name">'+esc(s.name)+'</div><div class="graph-val" style="color:'+col+'">'+(typeof v==='number'?v.toFixed(2):'&mdash;')+'</div></div><canvas id="gc'+i+'"></canvas></div>';
+  });
+  document.getElementById('content').innerHTML=h;
+  sigs.forEach(function(s,i){
+    var cv=document.getElementById('gc'+i);
+    if(cv) drawChart(cv,s.history||[],s.min,s.max,CHART_COLORS[i%CHART_COLORS.length]);
+  });
+}
+
+function renderAlarms(){
+  var h='';
+  var alarms=state.alarms||[];
+  var unack=alarms.filter(function(a){return !a.acknowledged;}).length;
+  h+='<div class="refresh-bar"><span class="refresh-time">'+alarms.length+' alarm(s) &nbsp;&middot;&nbsp; '+unack+' unacknowledged</span></div>';
+  if(!alarms.length){
+    h+='<div class="empty">No alarms.<br><br>All signals within thresholds.</div>';
+  } else {
+    h+='<div class="card">';
+    alarms.slice(0,30).forEach(function(a,idx){
+      h+='<div class="alarm-row">';
+      h+='<div class="alarm-signal">'+esc(a.signalName||a.nodeId||'')+'</div>';
+      h+='<div class="alarm-meta">';
+      h+='<span class="badge '+(a.type==='high'?'badge-high':'badge-low')+'">'+(a.type==='high'?'&#9650; HIGH':'&#9660; LOW')+'</span>';
+      h+=' &nbsp;Value: '+esc(a.value)+'&nbsp;&nbsp;Limit: '+esc(a.threshold);
+      h+='</div>';
+      h+='<div class="alarm-meta">'+esc(fmt(a.time||a.timestamp))+(a.acknowledged?' &nbsp;<span class="badge badge-ack">ACK</span>':'')+'</div>';
+      if(!a.acknowledged){
+        h+='<div class="alarm-actions"><button class="btn btn-ack" onclick="ackAlarm('+idx+')">Acknowledge</button></div>';
+      }
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  document.getElementById('content').innerHTML=h;
+}
+
+function ackAlarm(idx){
+  var a=state.alarms[idx];
+  if(!a) return;
+  a.acknowledged=true; // instant feedback; the desktop confirms on the next refresh
+  renderAlarms();
+  api('/api/alarms/ack',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.id})}).catch(function(e){
+    if(e.status===401) showLogin('Wrong PIN.');
+  });
+}
+
+function renderEvents(){
+  var h='';
+  var events=state.events||[];
+  h+='<div class="refresh-bar"><span class="refresh-time">'+events.length+' event(s) captured</span></div>';
+  if(state.active){
+    h+='<div class="recording-badge"><div class="rec-dot"></div>RECORDING: '+esc(state.active.triggerSignalName||'')+'</div>';
+  }
+  if(!events.length){
+    h+='<div class="empty">No Black Box events yet.<br><br>Set a threshold on a pinned signal to trigger a capture.</div>';
+  } else {
+    h+='<div class="card">';
+    events.forEach(function(ev){
+      h+='<div class="event-row">';
+      h+='<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+      h+='<div class="event-signal">'+esc(ev.triggerSignalName||ev.id||'')+'</div>';
+      if(ev.acknowledged) h+='<span class="badge badge-ack">ACK</span>';
+      h+='</div>';
+      h+='<div class="event-meta">';
+      h+='<span class="badge '+(ev.triggerType==='high'?'badge-high':'badge-low')+'">'+(ev.triggerType==='high'?'&#9650; HIGH':'&#9660; LOW')+'</span>';
+      h+=' at '+esc(ev.triggerValue)+' (limit '+esc(ev.threshold)+')';
+      h+='</div>';
+      h+='<div class="event-meta">'+fmt(ev.startedAtISO)+'&nbsp;&middot;&nbsp;'+esc(ev.signalCount)+' signal(s)</div>';
+      if(ev.matchedPatterns&&ev.matchedPatterns.length){
+        ev.matchedPatterns.forEach(function(p){h+='<span class="pattern-tag">'+esc(p.label)+'</span>';});
+      }
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  document.getElementById('content').innerHTML=h;
+}
+
+function appendMsgEl(box,text,role){
+  var div=document.createElement('div');
+  div.className='msg '+role;
+  div.textContent=text;
+  box.appendChild(div);
+}
+
+function renderChat(){
+  var h='';
+  h+='<div class="chat-wrap">';
+  h+='<div class="suggestions">';
+  ['Any alarms?','What signals are monitored?','How many events?','Are all signals normal?'].forEach(function(s){
+    h+='<div class="sug" onclick="sendSug(this)">'+s+'</div>';
+  });
+  h+='</div>';
+  h+='<div class="chat-messages" id="chatMsgs"></div>';
+  h+='<div class="chat-input-row">';
+  h+='<input id="chatInput" class="chat-input" placeholder="Ask or command RTOM..." onkeydown="if(event.key===\'Enter\')sendChat()">';
+  h+='<button class="chat-send" onclick="sendChat()">Send</button>';
+  h+='</div>';
+  h+='</div>';
+  document.getElementById('content').innerHTML=h;
+  var box=document.getElementById('chatMsgs');
+  chatLog.forEach(function(m){appendMsgEl(box,m.t,m.r);});
+  box.scrollTop=box.scrollHeight;
+}
+
+function addMsg(text,role){
+  chatLog.push({r:role,t:text});
+  var box=document.getElementById('chatMsgs');
+  if(box){appendMsgEl(box,text,role);box.scrollTop=box.scrollHeight;}
+}
+
+async function sendChat(){
+  var input=document.getElementById('chatInput');
+  var q=(input?input.value:'').trim();
+  if(!q) return;
+  input.value='';
+  addMsg(q,'user');
+  try{
+    var d=await api('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})});
+    addMsg(d.answer||'No response','bot');
+  }catch(e){
+    if(e.status===401){showLogin('Wrong PIN.');return;}
+    if(e.status===429){showLogin('Too many wrong PINs. Wait a few minutes and try again.');return;}
+    addMsg('Error reaching RTOM. Check connection.','bot');
+  }
+}
+
+function sendSug(el){
+  var i=document.getElementById('chatInput');
+  if(i){i.value=el.textContent;sendChat();}
+}
+
+function hms(ms){
+  var s=Math.max(0,Math.floor(ms/1000));
+  function p(n){return String(n).padStart(2,'0');}
+  return p(Math.floor(s/3600))+':'+p(Math.floor((s%3600)/60))+':'+p(s%60);
+}
+// Elapsed time is measured on the laptop and sent as a duration, so the phone's clock doesn't matter
+function updateRunLabel(){
+  var el=document.getElementById('runLabel');
+  if(!el) return;
+  if(authNeeded||state.runElapsedMs===null||state.runElapsedMs===undefined){el.textContent='';return;}
+  el.textContent='\u23F1 Monitoring '+hms(state.runElapsedMs+(Date.now()-state.runReceivedAt));
+}
+
+fetchState();
+setInterval(fetchState,3000);
+setInterval(updateRunLabel,1000);
+</script>
+</body>
+</html>
